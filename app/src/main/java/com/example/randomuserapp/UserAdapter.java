@@ -1,11 +1,12 @@
 package com.example.randomuserapp;
+import com.example.randomuserapp.UserModel;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -19,97 +20,60 @@ import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 import java.util.List;
 
-public class UserAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
-    private static final int ITEM_TYPE_USER = 0;
-    private static final int ITEM_TYPE_LOADING = 1;
-
+public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
     private Context context;
     private List<UserModel> userList;
-    private boolean isLoadingAdded = false;
 
     public UserAdapter(Context context, List<UserModel> userList) {
         this.context = context;
         this.userList = userList;
     }
 
-    @Override
-    public int getItemViewType(int position) {
-        return (position == userList.size()) ? ITEM_TYPE_LOADING : ITEM_TYPE_USER;
-    }
-
     @NonNull
     @Override
-    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        if (viewType == ITEM_TYPE_USER) {
-            View view = LayoutInflater.from(context).inflate(R.layout.item_user, parent, false);
-            return new UserViewHolder(view);
-        } else {
-            View view = LayoutInflater.from(context).inflate(R.layout.item_loading, parent, false);
-            return new LoadingViewHolder(view);
-        }
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(context).inflate(R.layout.item_user, parent, false);
+        return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-        if (holder instanceof UserViewHolder) {
-            UserModel user = userList.get(position);
-            UserViewHolder userViewHolder = (UserViewHolder) holder;
-            userViewHolder.userName.setText(user.getName().getFullName());
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        UserModel user = userList.get(position);
+        holder.userName.setText(user.getName().getFullName());
 
-            // Load image with Glide and handle errors
-            Glide.with(context)
-                    .load(user.getPicture().getLarge())
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .placeholder(R.drawable.placeholder_image)  // While loading
-                    .error(R.drawable.error_image)  // If fails
-                    .listener(new RequestListener<Drawable>() {
-                        @Override
-                        public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
-                            Toast.makeText(context, "Failed to load image for " + user.getName().getFullName(), Toast.LENGTH_SHORT).show();
-                            return false;
-                        }
+        // Load image with Glide and handle errors
+        Glide.with(context)
+                .load(user.getPicture().getLarge())
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .placeholder(R.drawable.placeholder_image)  // While loading
+                .error(R.drawable.error_image)  // If fails
+                .into(holder.profileImageView);
 
-                        @Override
-                        public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource) {
-                            return false;
-                        }
-                    })
-                    .into(userViewHolder.profileImageView);
-        }
+        // Handle click event to open details screen
+        holder.itemView.setOnClickListener(v -> {
+            Intent intent = new Intent(context, UserDetailsActivity.class);
+            intent.putExtra("name", user.getName().getFullName());
+            intent.putExtra("image", user.getPicture().getLarge());
+            intent.putExtra("email", user.getEmail());
+            intent.putExtra("phone", user.getPhone());
+            intent.putExtra("location", user.getLocation().getFullAddress());
+            context.startActivity(intent);
+        });
     }
 
     @Override
     public int getItemCount() {
-        return isLoadingAdded ? userList.size() + 1 : userList.size();
+        return userList.size();
     }
 
-    public void addLoadingFooter() {
-        isLoadingAdded = true;
-        notifyItemInserted(userList.size());
-    }
-
-    public void removeLoadingFooter() {
-        isLoadingAdded = false;
-        notifyItemRemoved(userList.size());
-    }
-
-    public static class UserViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView profileImageView;
         TextView userName;
 
-        public UserViewHolder(@NonNull View itemView) {
+        public ViewHolder(@NonNull View itemView) {
             super(itemView);
             profileImageView = itemView.findViewById(R.id.profileImageView);
             userName = itemView.findViewById(R.id.userName);
-        }
-    }
-
-    public static class LoadingViewHolder extends RecyclerView.ViewHolder {
-        ProgressBar progressBar;
-
-        public LoadingViewHolder(@NonNull View itemView) {
-            super(itemView);
-            progressBar = itemView.findViewById(R.id.progressBar);
         }
     }
 }
